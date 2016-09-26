@@ -58,3 +58,6 @@
 [submodule "ext/pffft"]
 	path = ext/pffft
 	url = https://github.com/mldbai/pffft.git
+[submodule "html/ext/libhubbub"]
+	path = html/ext/libhubbub
+	url = git@github.com:mldbai/libhubbub.git

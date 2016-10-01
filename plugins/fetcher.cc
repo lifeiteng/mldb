@@ -111,7 +111,10 @@ struct FetcherFunction: public ValueFunctionT<FetcherArgs, FetcherOutput> {
                 blob = CellValue::blob(streamo.str());
             }
 
-            result.content = ExpressionValue(std::move(blob), info.lastModified);
+            result.content = ExpressionValue(std::move(blob),
+                                             info.lastModified.isADate()
+                                             ? info.lastModified
+                                             : Date::now());
             result.error = ExpressionValue::null(Date::notADate());
             return result;
         }

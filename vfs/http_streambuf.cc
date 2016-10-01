@@ -32,6 +32,7 @@ convertHeaderToInfo(const HttpHeader & header)
         result.exists = true;
         result.etag = header.tryGetHeader("etag");
         result.size = header.contentLength;
+        result.contentType = header.contentType;
         string lastModified = header.tryGetHeader("last-modified");
         if (!lastModified.empty()) {
             static const char format[] = "%a, %d %b %Y %H:%M:%S %Z"; // rfc 1123
@@ -42,7 +43,12 @@ convertHeaderToInfo(const HttpHeader & header)
                                            tm.tm_hour, tm.tm_min, tm.tm_sec);
             }
         }
-                
+        else result.lastModified = Date::notADate();
+
+        for (auto & h: header.headers) {
+            result.objectMetadata[h.first] = h.second;
+        }
+
         return result;
     }
 
@@ -103,9 +109,12 @@ struct HttpStreamingDownloadSource {
                 if (o.first == "http-set-cookie")
                     proxy.setCookie(o.second);
                 else if (o.first.find("http-") == 0)
-                    throw ML::Exception("Unknown HTTP stream parameter " + o.first + " = " + o.second);
+                    throw HttpReturnException
+                        (500,
+                         "Unknown HTTP stream parameter '"
+                         + o.first + " = " + o.second + "'");
             }
-
+            
             reset();
         }
 
@@ -265,9 +274,17 @@ struct HttpStreamingDownloadSource {
                     return;
 
                 if (resp.code() != 200) {
-                    throw ML::Exception("HTTP code %d reading %s\n\n%s",
-                                        resp.code(), urlStr.c_str(),
-                                        string(errorBody, 0, 1024).c_str());
+                    if (resp.code() == 0) {
+                        throw HttpReturnException
+                            (400, "HTTP error reading " + urlStr + "\n\n"
+                             + resp.errorMessage());
+                    }
+                    else {
+                        throw HttpReturnException
+                            (400, "HTTP code " + to_string(resp.code())
+                             + " reading " + urlStr + "\n\n"
+                             + string(errorBody, 0, 1024));
+                    }
                 }
                 
                 dataQueue.push("");

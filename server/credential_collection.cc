@@ -12,9 +12,10 @@
 #include "mldb/types/structure_description.h"
 #include "mldb/types/pointer_description.h"
 #include "mldb/soa/credentials/credential_provider.h"
-#include "mldb/types/id.h"
 #include "mldb/utils/log.h"
+#include "mldb/utils/json_utils.h"
 #include <signal.h>
+
 
 using namespace std;
 
@@ -131,12 +132,19 @@ initRoutes(RouteManager & manager)
     manager.addDeleteRoute();
 }
 
+uint64_t highwayHash(const uint64_t* key, const char* bytes,
+                     const uint64_t size);
+
+
 std::string
 CredentialRuleCollection::
 getKey(CredentialRuleConfig & config)
 {
-    if (config.id == "")
-        return MLDB::format("%016llx", (unsigned long long)Id(jsonEncodeStr(config)).hash());
+    if (config.id == "") {
+        // By default, it's a content hash of the credential contents
+        uint64_t hash = jsonHash(jsonEncode(config));
+        return MLDB::format("%016llx", (unsigned long long)hash);
+    }
     return config.id;
 }
 
